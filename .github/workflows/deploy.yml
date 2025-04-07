@@ -1,0 +1,43 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+
+    - name: Install Dependencies
+      run: npm install
+
+    - name: Run Unit Tests
+      run: npm test
+
+    - name: Run Lint
+      run: npx eslint .
+
+    - name: Docker Login
+      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u stenny1710 --password-stdin
+
+    - name: Build and Push Docker Image
+      run: |
+        docker build -t stenny1710/my-k8s-app:v1 .
+        docker push stenny1710/my-k8s-app:v1
+
+    - name: Set up Kubeconfig
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+
+    - name: Deploy to Kubernetes
+      run: kubectl apply -f deployment.yaml
