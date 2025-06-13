@@ -1,19 +1,32 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: seekers-plus
+  name: seekersplus-app
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: seekers-plus
+      app: seekersplus
   template:
     metadata:
       labels:
-        app: seekers-plus
+        app: seekersplus
     spec:
       containers:
-      - name: seekers-plus
-        image: stenny1710/seekers-plus:latest
+      - name: seekersplus
+        image: stenny1710/seekersplus:latest
         ports:
         - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seekersplus-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: seekersplus
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
