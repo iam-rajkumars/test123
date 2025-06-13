@@ -1,32 +1,65 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: seekersplus-app
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: seekersplus
-  template:
-    metadata:
-      labels:
-        app: seekersplus
-    spec:
-      containers:
-      - name: seekersplus
-        image: stenny1710/seekersplus:latest
-        ports:
-        - containerPort: 8000
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: seekersplus-service
-spec:
-  type: LoadBalancer
-  selector:
-    app: seekersplus
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 8000
+name: CI/CD for Seekers Plus
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install Dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Run Unit Tests
+      run: |
+        pytest
+
+    - name: Static Code Analysis
+      run: |
+        pylint app/ --fail-under=7
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: stenny1710/seekersplus:latest
+
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.29.0'
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v3
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        region: us-east-1
+
+    - name: Update kubeconfig
+      run: aws eks update-kubeconfig --name seekers-plus --region us-east-1
+
+    - name: Deploy to Kubernetes
+      run: kubectl apply -f k8s-deployment.yaml
