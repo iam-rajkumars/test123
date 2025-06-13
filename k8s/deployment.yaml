@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seekers-plus
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: seekers-plus
+  template:
+    metadata:
+      labels:
+        app: seekers-plus
+    spec:
+      containers:
+      - name: seekers-plus
+        image: stenny1710/seekers-plus:latest
+        ports:
+        - containerPort: 8000
